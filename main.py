@@ -43,10 +43,16 @@ def run(name: str, ti_num: int = 2):
     cc.sample_test_inputs(ti_config, gpt, ti_num)
     cc.save(f"{project_p}/outputs/{name}")
 
-    preds = [["10"] * 6 + ["8"] * 2, ["7"] * 4 + ["8"] * 4]
-    scores = cc.test_scores(preds, mean=True)
+    # preds = [["10"] * 6 + ["8"] * 2, ["7"] * 4 + ["8"] * 4]
+    preds = [
+        ["Yes, it's is true.", "No"],
+        ["Yes, it's is true.", "No"],
+        ["Yes.", "Yes"],
+        ["No", "No"],
+    ]
+    scores = cc.test_scores(preds, mean=False)
     print(scores)
 
 
 if __name__ == "__main__":
-    run("Arithmetic")
+    run("BBNLI")

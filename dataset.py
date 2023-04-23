@@ -3,6 +3,7 @@ from typing import List, Dict, Tuple
 from prompt import Prompt
 from config import GPTConfig
 from gptcache import GPTCache
+from util import bbq_equivalence_test, bbnli_equivalence_test
 import numpy as np
 import pandas as pd
 import ipdb
@@ -144,6 +145,25 @@ class BBQ(EditDataset):
             [self.test_input_prompt.out_func(c) for c in t] for t in self.test_inputs
         ]
 
+    def test_scores(self, preds: List[List[str]], **kwargs):
+        # Eval edit and check equality.
+        mode = kwargs.get("mode", "equality")
+        mean = kwargs.get("mean", False)
+        if mode == "equavalence":
+            scores = []
+            for pred, test_input_a in zip(preds, self.test_inputs):
+                scores.append(
+                    np.mean(
+                        [
+                            bbq_equivalence_test(p, ti_a[1])
+                            for p, ti_a in zip(pred, test_input_a)
+                        ]
+                    )
+                )
+        else:
+            raise NotImplementedError("Only equavalence mode is implemented for now.")
+        return np.mean(scores) if mean else scores
+
     def save(self, path: str):
         # Save edit_queries, edits, test_inp_queries, test_inputs
         # as well as the prompts to a json files under path.
@@ -210,6 +230,27 @@ class BBNLI(EditDataset):
         self.test_inputs = [
             [self.test_input_prompt.out_func(c) for c in t] for t in self.test_inputs
         ]
+
+    def test_scores(self, preds: List[List[str]], **kwargs):
+        assert len(preds) == len(self.test_inputs)
+        for i, pred in enumerate(preds):
+            assert len(pred) == len(self.test_inputs[i])
+        mode = kwargs.get("mode", "equivalence")
+        mean = kwargs.get("mean", False)
+        if mode == "equivalence":
+            scores = []
+            for pred, test_input_a in zip(preds, self.test_inputs):
+                scores.append(
+                    np.mean(
+                        [
+                            bbnli_equivalence_test(p, ti_a[1])
+                            for p, ti_a in zip(pred, test_input_a)
+                        ]
+                    )
+                )
+        else:
+            raise NotImplementedError("Only equivalence mode is implemented for now.")
+        return np.mean(scores) if mean else scores
 
     def save(self, path: str):
         # Save edit_queries, edits, test_inp_queries, test_inputs
