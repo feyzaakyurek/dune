@@ -22,6 +22,19 @@ class BBQTestInputsConfig(GPTConfig):
 
 
 @dataclass
+class ArithmeticEditConfig(GPTConfig):
+    max_tokens: int = 100
+    model_name: str = "gpt-4"
+
+
+@dataclass
+class ArithmeticTestInputsConfig(GPTConfig):
+    max_tokens: int = 100
+    stop: List[str] = field(default_factory=lambda: ["Example"])
+    model_name: str = "gpt-4"
+
+
+@dataclass
 class BBNLIEditConfig(GPTConfig):
     max_tokens: int = 100
     model_name: str = "gpt-3.5-turbo"

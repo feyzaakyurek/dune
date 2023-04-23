@@ -3,6 +3,7 @@ from typing import List, Dict, Tuple
 from prompt import Prompt
 from config import GPTConfig
 from gptcache import GPTCache
+import numpy as np
 import pandas as pd
 import ipdb
 import json
@@ -31,8 +32,64 @@ class EditDataset(ABC):
         pass
 
     @abstractmethod
+    def test_scores(self, preds: List):
+        pass
+
+    @abstractmethod
     def save(path: str):
         pass
+
+
+class Arithmetic(EditDataset):
+    def __init__(
+        self,
+    ):
+        data_file = "/projectnb/llamagrp/feyzanb/dune/source/arithmetic/arithmetic_validated_chainofreasoning.csv"
+        self.edit_prompt = None
+        self.test_input_prompt = None
+        self.read_data(data_file)
+
+    def read_data(self, data_file):
+        self.data = pd.read_csv(data_file)[:3]
+
+    def sample_edit(self, config: GPTConfig, gpt: GPTCache):
+        self.edits = self.data["edit"].tolist()
+
+    def _post_process_edits():
+        pass
+
+    def sample_test_inputs(self, config: GPTConfig, gpt: GPTCache, ti_num: int = 1):
+        cols = [col for col in self.data.columns if col.startswith("test_input")]
+        self.test_inputs = [
+            [row[col] for col in cols] for _, row in self.data.iterrows()
+        ]
+
+    def _post_process_test_inputs(self):
+        pass
+
+    def test_scores(self, preds: List[List[str]], **kwargs):
+        # Eval edit and check equality.
+        gold = [str(eval(e.split(" = ")[0])) for e in self.edits]
+        mode = kwargs.get("mode", "equality")
+        mean = kwargs.get("mean", False)
+        if mode == "equality":
+            scores = []
+            for pred, g in zip(preds, gold):
+                scores.append(np.mean([p == g for p in pred]))
+        else:
+            raise NotImplementedError("Only equality mode is implemented for now.")
+        return np.mean(scores) if mean else scores
+
+    def save(self, path: str):
+        os.makedirs(path, exist_ok=True)
+        with open(f"{path}/arithmetic.json", "w") as f:
+            json.dump(
+                {
+                    "edits": self.edits,
+                    "test_inputs": self.test_inputs,
+                },
+                f,
+            )
 
 
 class BBQ(EditDataset):
