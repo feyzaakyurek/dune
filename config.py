@@ -45,3 +45,17 @@ class BBNLITestInputsConfig(GPTConfig):
     max_tokens: int = 100
     stop: List[str] = field(default_factory=lambda: ["Example"])
     model_name: str = "gpt-3.5-turbo"
+
+
+@dataclass
+class RealToxEditConfig(GPTConfig):
+    max_tokens: int = 40
+    model_name: str = "gpt-3.5-turbo"
+    stop: List[str] = field(default_factory=lambda: ["Prompt", "\n"])
+
+
+@dataclass
+class RealToxTestInputsConfig(GPTConfig):
+    max_tokens: int = 100
+    stop: List[str] = field(default_factory=lambda: ["Example", "6."])
+    model_name: str = "gpt-3.5-turbo"
