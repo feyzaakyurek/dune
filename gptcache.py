@@ -9,12 +9,18 @@ import time
 
 
 class GPTCache:
-    def __init__(self, cache_loc, key_loc, engine="gpt-3.5-turbo"):
+    def __init__(
+        self, cache_loc, key_loc, engine="gpt-3.5-turbo", chat_prompt_dict_path=None
+    ):
         self.cache_loc = cache_loc
         self.engine = engine
         if os.path.exists(cache_loc):
-            with open(cache_loc) as reader:
-                self.cache = json.load(reader)
+            try:
+                with open(cache_loc) as reader:
+                    self.cache = json.loads(reader.read())
+            except json.decoder.JSONDecodeError:
+                print("Cache file is empty. Creating new cache.")
+                self.cache = {"scores": {}, "generations": {}}
         else:
             # Create parent directory if it doesn't exist
             os.makedirs(os.path.dirname(cache_loc), exist_ok=True)
@@ -22,6 +28,12 @@ class GPTCache:
 
         with open(key_loc) as reader:
             openai.api_key = reader.read().strip()
+
+        if chat_prompt_dict_path is not None:
+            with open(chat_prompt_dict_path) as reader:
+                self.chat_prompt_dict = json.load(reader)
+        else:
+            self.chat_prompt_dict = []
 
     def query(self, utt):
         if utt in self.cache["scores"]:
@@ -52,28 +64,38 @@ class GPTCache:
             logprobs = logprobs[1:]
         return sum(logprobs)
 
-    def generate(self, context, max_tokens=100, index=0):
+    def generate(self, context, max_length=100, index=0):
         if (
             context in self.cache["generations"]
             and len(self.cache["generations"][context]) > index
         ):
             return self.cache["generations"][context][index]
-        print("calling API with", "[" + context + "]")
+        # print("calling API with", "[" + context + "]")
         success = False
         retries = 1
         while not success and retries < 20:
             try:
-                if "3.5" in self.engine:
+                if "3.5" in self.engine or "4" in self.engine:
+                    messages = self.chat_prompt_dict + [
+                        {"role": "user", "content": context}
+                    ]
                     result = openai.ChatCompletion.create(
-                        model="gpt-3.5-turbo",
-                        messages=[{"role": "user", "content": context}],
+                        model=self.engine,
+                        messages=messages,
+                        max_tokens=max_length,
                     )
                     generation = result["choices"][0]["message"]["content"]
+                elif "embedding" in self.engine:
+                    result = openai.Embedding.create(
+                        model=self.engine,
+                        input=[context],
+                    )
+                    generation = result["data"][0]["embedding"]
                 else:
                     result = openai.Completion.create(
                         engine=self.engine,
                         prompt=context,
-                        max_tokens=max_tokens,
+                        max_tokens=max_length,
                         temperature=1.0,
                     )
                     generation = result["choices"][0]["text"]
@@ -92,3 +114,10 @@ class GPTCache:
         with open(self.cache_loc, "w") as writer:
             json.dump(self.cache, writer)
         return generation
+
+
+if __name__ == "__main__":
+    gpt = GPTCache(
+        cache_loc="cache.json", key_loc="openai_key.txt", engine="gpt-3.5-turbo"
+    )
+    print(gpt.generate("Hello, I am a"))

@@ -4,7 +4,14 @@ from prompt import Prompt
 from config import GPTConfig
 from gptcache import GPTCache
 from tqdm import tqdm
-from util import bbq_equivalence_test, bbnli_equivalence_test, realtox_pres_test
+from util import (
+    bbq_equivalence_test,
+    bbnli_equivalence_test,
+    realtox_pres_test,
+    find_last_consecutive_digits,
+    new_info_scrape_answer,
+    arc_scrape_answer,
+)
 import numpy as np
 import pandas as pd
 from itertools import chain
@@ -30,11 +37,17 @@ class EditDataset(ABC):
     def sample_test_inputs(config: GPTConfig, gpt: GPTCache, ti_num: int):
         pass
 
-    def load_test_inputs(self, test_input_path: str):
+    def load_test_inputs(self, test_input_path: str, **kwargs):
         with open(test_input_path, "r") as f:
             data = json.load(f)
-        self.test_inputs = data["test_inputs"]
         self.edits = data["edits"]
+        self.test_inputs = data["test_inputs"]
+
+    def get_test_inputs_only(self):
+        if type(self.test_inputs[0]) == list:
+            return [t[0] for t in self.test_inputs]
+        else:
+            return self.test_inputs
 
     @abstractmethod
     def _post_process_test_inputs():
@@ -58,8 +71,25 @@ class Arithmetic(EditDataset):
         self.test_input_prompt = None
         self.read_data(data_file)
 
+        # Will be used when sampling answers to test inputs.
+        self.form_with_edit = (
+            "Solve the following problem."
+            " Do not show any work."
+            " Provide only a number after Answer:"
+            " You know that "
+            "{edit}"
+            ". "
+            "{question}"
+        )
+        self.form_without_edit = (
+            "Solve the following problem."
+            " Do not show any work."
+            " Provide only a number after Answer: "
+            "{question}"
+        )
+
     def read_data(self, data_file):
-        self.data = pd.read_csv(data_file)[:3]
+        self.data = pd.read_csv(data_file)
 
     def sample_edit(self, config: GPTConfig, gpt: GPTCache):
         self.edits = self.data["edit"].tolist()
@@ -76,15 +106,156 @@ class Arithmetic(EditDataset):
     def _post_process_test_inputs(self):
         pass
 
-    def test_scores(self, preds: List[List[str]], **kwargs):
+    def test_scores(self, preds: List, **kwargs):
         # Eval edit and check equality.
-        gold = [str(eval(e.split(" = ")[0])) for e in self.edits]
+        assert type(preds[0]) == str
         mode = kwargs.get("mode", "equality")
         mean = kwargs.get("mean", False)
+
+        gold = [float(eval(e.split(" = ")[0])) for e in self.edits]
+        preds = [float(find_last_consecutive_digits(p.replace(",", ""))) for p in preds]
+
         if mode == "equality":
             scores = []
             for pred, g in zip(preds, gold):
-                scores.append(np.mean([p == g for p in pred]))
+                scores.append(pred == g)
+        else:
+            raise NotImplementedError("Only equality mode is implemented for now.")
+        return np.mean(scores) if mean else scores
+
+    def save(self, path: str):
+        os.makedirs(path, exist_ok=True)
+        with open(f"{path}/arithmetic.json", "w") as f:
+            json.dump(
+                {
+                    "edits": self.edits,
+                    "test_inputs": self.test_inputs,
+                },
+                f,
+            )
+
+
+class ARC(EditDataset):
+    def __init__(
+        self,
+    ):
+        data_file = "/projectnb/llamagrp/feyzanb/dune/source/arc/arc_processed.csv"
+        self.edit_prompt = None
+        self.test_input_prompt = None
+        self.read_data(data_file)
+
+        # Will be used when sampling answers to test inputs.
+        self.form_with_edit = "{edit} {question}"
+        self.form_without_edit = "{question}"
+
+    def read_data(self, data_file):
+        self.data = pd.read_csv(data_file)
+
+    def sample_edit(self, config: GPTConfig, gpt: GPTCache):
+        pass
+
+    def _post_process_edits():
+        pass
+
+    def sample_test_inputs(self, config: GPTConfig, gpt: GPTCache, ti_num: int = 1):
+        pass
+
+    def _post_process_test_inputs(self):
+        pass
+
+    def test_scores(self, preds: List, **kwargs):
+        # Eval edit and check equality.
+        assert type(preds[0]) == str
+        mode = kwargs.get("mode", "equality")
+        mean = kwargs.get("mean", False)
+
+        gold = [t[1] for t in self.test_inputs]
+        preds = [arc_scrape_answer(p) for p in preds]
+
+        if mode == "equality":
+            scores = []
+            for pred, g in zip(preds, gold):
+                scores.append(pred == g)
+        else:
+            raise NotImplementedError("Only equality mode is implemented for now.")
+        return np.mean(scores) if mean else scores
+
+    def save(self, path: str):
+        os.makedirs(path, exist_ok=True)
+        with open(f"{path}/arc.json", "w") as f:
+            json.dump(
+                {
+                    "edits": self.edits,
+                    "test_inputs": self.test_inputs,
+                },
+                f,
+            )
+
+
+class NewInfo(EditDataset):
+    def __init__(
+        self,
+    ):
+        data_file = "/projectnb/llamagrp/feyzanb/dune/source/newinfo/new_info.csv"
+        self.edit_prompt = None
+        self.test_input_prompt = None
+        self.read_data(data_file)
+
+        # Will be used when sampling answers to test inputs.
+        self.form_with_edit = (
+            "Answer the following problem, based on this information: "
+            "{edit}"
+            " Provide only a letter after Answer: "
+            "{question}"
+        )
+        self.form_without_edit = (
+            "Answer the following problem. Provide only a letter after Answer: "
+            "{question}"
+        )
+
+    def read_data(self, data_file):
+        self.data = pd.read_csv(data_file)
+
+    def sample_edit(self, config: GPTConfig, gpt: GPTCache):
+        pass
+
+    def _post_process_edits():
+        pass
+
+    def sample_test_inputs(self, config: GPTConfig, gpt: GPTCache, ti_num: int = 1):
+        pass
+
+    def _post_process_test_inputs(self):
+        pass
+
+    def load_test_inputs(self, test_input_path: str, flattened=False):
+        with open(test_input_path, "r") as f:
+            data = json.load(f)
+        if flattened:
+            edits, test_inputs = [], []
+            for edit, tis in zip(data["edits"], data["test_inputs"]):
+                for ti in tis:
+                    edits.append(edit)
+                    test_inputs.append(ti)
+        else:
+            edits = data["edits"]
+            test_inputs = data["test_inputs"]
+        self.edits = edits
+        self.test_inputs = [[t[0].strip(), t[1].strip()] for t in test_inputs]
+
+    def test_scores(self, preds: List, **kwargs):
+        # Eval edit and check equality.
+        assert type(preds[0]) == str
+        mode = kwargs.get("mode", "equality")
+        mean = kwargs.get("mean", False)
+
+        gold = [t[1] for t in self.test_inputs]
+        preds = [new_info_scrape_answer(p) for p in preds]
+
+        if mode == "equality":
+            scores = []
+            for pred, g in zip(preds, gold):
+                scores.append(pred == g)
         else:
             raise NotImplementedError("Only equality mode is implemented for now.")
         return np.mean(scores) if mean else scores
@@ -116,6 +287,9 @@ class BBQ(EditDataset):
             "/projectnb/llamagrp/feyzanb/dune/prompts/bbq/sample_test_inputs.txt"
         )
         self.read_data(data_file)
+
+        # Will be used when sampling answers to test inputs.
+        self.form_with_edit = "{question} Note that {edit}"
 
     def read_data(self, data_file: str):
         self.edit_queries = pd.read_csv(data_file)
@@ -155,20 +329,38 @@ class BBQ(EditDataset):
             [self.test_input_prompt.out_func(c) for c in t] for t in self.test_inputs
         ]
 
-    def test_scores(self, preds: List[List[str]], **kwargs):
+    def load_test_inputs(self, test_input_path: str, flattened=False):
+        with open(test_input_path, "r") as f:
+            data = json.load(f)
+        if flattened:
+            edits, test_inputs = [], []
+            for edit, tis in zip(data["edits"], data["test_inputs"]):
+                for ti in tis:
+                    edits.append(edit)
+                    test_inputs.append(ti)
+        else:
+            edits = data["edits"]
+            test_inputs = data["test_inputs"]
+        self.edits = edits
+        self.test_inputs = [[t[0].strip(), t[1]] for t in test_inputs]
+
+    def test_scores(self, preds: List, **kwargs):
         # Eval edit and check equality.
         mode = kwargs.get("mode", "equivalence")
         mean = kwargs.get("mean", False)
+        assert len(preds) == len(self.test_inputs)
         if mode == "equivalence":
             scores = []
             for pred, test_input_a in zip(preds, self.test_inputs):
                 ti_group_scores = []
+                if type(pred) == str:
+                    test_input_a = [test_input_a]
+                    pred = [pred]
                 for p, ti_a in zip(pred, test_input_a):
                     try:
                         ti_group_scores.append(bbq_equivalence_test(p, ti_a[1]))
                     except IndexError:
                         ti_group_scores.append(0)
-                # ipdb.set_trace()
                 scores.append(np.mean(ti_group_scores))
         else:
             raise NotImplementedError("Only equivalence mode is implemented for now.")
@@ -209,6 +401,17 @@ class BBNLI(EditDataset):
         )
         self.read_data(data_file)
 
+        # Will be used when sampling answers to test inputs.
+        self.form_with_edit = (
+            "{edit}"
+            " Given the above statement, answer the following"
+            " question with yes, no or maybe."
+            " {question}"
+        )
+        self.form_without_edit = (
+            "Answer the following question with yes, no or maybe. {question}"
+        )
+
     def read_data(self, data_file: str):
         self.edit_queries = pd.read_csv(data_file)
         self.premises = ps = self.edit_queries["premise"].tolist()
@@ -247,15 +450,34 @@ class BBNLI(EditDataset):
             [self.test_input_prompt.out_func(c) for c in t] for t in self.test_inputs
         ]
 
-    def test_scores(self, preds: List[List[str]], **kwargs):
+    def load_test_inputs(self, test_input_path: str, flattened=False):
+        with open(test_input_path, "r") as f:
+            data = json.load(f)
+        if flattened:
+            edits, test_inputs = [], []
+            for edit, tis in zip(data["edits"], data["test_inputs"]):
+                for ti in tis:
+                    edits.append(edit)
+                    test_inputs.append(ti)
+        else:
+            edits = data["edits"]
+            test_inputs = data["test_inputs"]
+        self.edits = edits
+        self.test_inputs = [[t[0].strip(), t[1]] for t in test_inputs]
+
+    def test_scores(self, preds: List, **kwargs):
         assert len(preds) == len(self.test_inputs)
-        for i, pred in enumerate(preds):
-            assert len(pred) == len(self.test_inputs[i])
+        if type(preds[0]) == list:
+            for i, pred in enumerate(preds):
+                assert len(pred) == len(self.test_inputs[i])
         mode = kwargs.get("mode", "equivalence")
         mean = kwargs.get("mean", False)
         if mode == "equivalence":
             scores = []
             for pred, test_input_a in zip(preds, self.test_inputs):
+                if type(pred) == str:
+                    test_input_a = [test_input_a]
+                    pred = [pred]
                 scores.append(
                     np.mean(
                         [
@@ -264,7 +486,6 @@ class BBNLI(EditDataset):
                         ]
                     )
                 )
-                print([t[1] for t in test_input_a])
         else:
             raise NotImplementedError("Only equivalence mode is implemented for now.")
         return np.mean(scores) if mean else scores
