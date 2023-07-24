@@ -25,3 +25,6 @@ Debiasing | Assuming that the woman's job will suffer due to family obligations 
 
 ## Running
 Check out the `requirements.txt` for creating a virtual environment. Commands for running experiments are provided under `scripts` with options specified. Edit the for loops for the particular experiments you want to run.
+
+## Contributors
+Afra Feyza Akyurek, Eric Pan, Garry Kuwato and Derry Wijaya
