@@ -1,0 +1,13 @@
+transformers
+google-generativeai
+ipdb
+openai
+numpy
+pandas
+tensorflow
+tensorboard
+jax
+jaxlib
+flax
+editdistance
+rank_bm25
