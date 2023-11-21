@@ -262,7 +262,7 @@ class NewInfo(EditDataset):
 
     def save(self, path: str):
         os.makedirs(path, exist_ok=True)
-        with open(f"{path}/arithmetic.json", "w") as f:
+        with open(f"{path}/new-info.json", "w") as f:
             json.dump(
                 {
                     "edits": self.edits,
@@ -289,7 +289,8 @@ class BBQ(EditDataset):
         self.read_data(data_file)
 
         # Will be used when sampling answers to test inputs.
-        self.form_with_edit = "{question} Note that {edit}"
+        # self.form_with_edit = "{question} Note that {edit}"
+        self.form_with_edit = "{edit} {question}"
 
     def read_data(self, data_file: str):
         self.edit_queries = pd.read_csv(data_file)
