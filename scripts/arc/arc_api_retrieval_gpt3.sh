@@ -8,16 +8,17 @@
 #$ -pe omp 4          # Specify the parallel environment and the number of cores
 #$ -t 1-3
 
-source /projectnb/llamagrp/feyzanb/anaconda3/etc/profile.d/conda.sh
-conda activate dune
+module load conda
+conda activate dune2
 
+PROJECTP="/projectnb/llamagrp/feyzanb/dune"
 
 cnt=0
 for MODELNAME in "gpt-3.5-turbo" "bard" "gpt-4"; do
     (( cnt++ ))
     if [[ $cnt -eq $SGE_TASK_ID ]]; then
-        OUTDIR="/projectnb/llamagrp/feyzanb/dune/outputs/ARC_locality/retrieval_gpt3_${MODELNAME}"
-        CACHE="/projectnb/llamagrp/feyzanb/dune/cache/ARC"
+        OUTDIR="${PROJECTP}/outputs/ARC_locality/retrieval_gpt3_${MODELNAME}"
+        CACHE="${PROJECTP}/cache/ARC"
         mkdir -p $OUTDIR
         mkdir -p $CACHE
         python eval.py \
@@ -25,24 +26,9 @@ for MODELNAME in "gpt-3.5-turbo" "bard" "gpt-4"; do
         --dataset_name ARC \
         --output_dir $OUTDIR \
         --retriever_mechanism gpt3 \
-        --chat_prompt_dict_path "/projectnb/llamagrp/feyzanb/dune/source/arc/chat_prompt_dict.json" \
-        --filename_queries "/projectnb/llamagrp/feyzanb/dune/source/arc/arc_locality_processed.json" \
-        --scope_cache /projectnb/llamagrp/feyzanb/dune/outputs/scope_classifier/distilbert-base-cased/all_shuffled_edits_cache.json \
+        --chat_prompt_dict_path "${PROJECTP}/source/arc/chat_prompt_dict.json" \
+        --filename_queries "${PROJECTP}/arc/arc_locality.json" \
+        --scope_cache ${PROJECTP}/outputs/scope_classifier/distilbert-base-cased/all_shuffled_edits_cache.json \
         --with_edit > ${OUTDIR}/log.txt 2>&1
     fi
 done
-
-# MODELNAME=bard
-# OUTDIR="/projectnb/llamagrp/feyzanb/dune/outputs/ARC_locality/retrieval_gpt3_${MODELNAME}"
-# CACHE="/projectnb/llamagrp/feyzanb/dune/cache/ARC"
-# mkdir -p $OUTDIR
-# mkdir -p $CACHE
-# python eval.py \
-# --model_name $MODELNAME \
-# --dataset_name ARC \
-# --output_dir $OUTDIR \
-# --retriever_mechanism gpt3 \
-# --chat_prompt_dict_path "/projectnb/llamagrp/feyzanb/dune/source/arc/chat_prompt_dict.json" \
-# --filename_queries "/projectnb/llamagrp/feyzanb/dune/source/arc/arc_locality_processed.json" \
-# --scope_cache /projectnb/llamagrp/feyzanb/dune/outputs/scope_classifier/distilbert-base-cased/all_shuffled_edits_cache.json \
-# --with_edit

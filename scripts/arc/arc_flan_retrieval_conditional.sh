@@ -11,16 +11,18 @@
 #$ -l gpu_c=6.0		# Request GPU compute capability
 #$ -t 1
 
-source /projectnb/llamagrp/feyzanb/anaconda3/etc/profile.d/conda.sh
-conda activate dune
+module load conda
+conda activate dune2
+
+PROJECTP="/projectnb/llamagrp/feyzanb/dune"
 
 
 cnt=0
 for MODELNAME in xl; do
     (( cnt++ ))
     if [[ $cnt -eq $SGE_TASK_ID ]]; then
-        OUTDIR="/projectnb/llamagrp/feyzanb/dune/outputs/ARC_locality/retrieval_conditional_flan-t5-${MODELNAME}"
-        CACHE="/projectnb/llamagrp/feyzanb/dune/cache/ARC"
+        OUTDIR="${PROJECTP}/outputs/ARC_locality/retrieval_conditional_flan-t5-${MODELNAME}"
+        CACHE="${PROJECTP}/cache/ARC"
         mkdir -p $OUTDIR
         mkdir -p $CACHE
         python eval.py \
@@ -29,8 +31,8 @@ for MODELNAME in xl; do
         --output_dir $OUTDIR \
         --retriever_mechanism scope \
         --generations_cache $CACHE/flan-t5-${MODELNAME}.json \
-        --filename_queries "/projectnb/llamagrp/feyzanb/dune/source/arc/arc_locality_processed.json" \
-        --scope_cache /projectnb/llamagrp/feyzanb/dune/outputs/scope_classifier/distilbert-base-cased/all_shuffled_edits_cache.json \
+        --filename_queries "${PROJECTP}/dune/scientific_locality.json" \
+        --scope_cache ${PROJECTP}/outputs/scope_classifier/distilbert-base-cased/all_shuffled_edits_cache.json \
         --with_edit > ${OUTDIR}/log.txt 2>&1
     fi
 done
