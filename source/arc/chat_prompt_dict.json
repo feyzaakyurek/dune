@@ -1,0 +1,14 @@
+[
+    {
+        "role": "system",
+        "content": "You are an expert at answering questions. Answer the following question with only the choice:"
+    },
+    {
+        "role": "user",
+        "content": "How many hands does a human usually have? A. One, B. Two, C. Three, D. Four"
+    },
+    {
+        "role": "assistant",
+        "content": "B"
+    }
+]

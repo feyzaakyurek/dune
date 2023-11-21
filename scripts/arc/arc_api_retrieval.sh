@@ -8,16 +8,17 @@
 #$ -pe omp 4          # Specify the parallel environment and the number of cores
 #$ -t 1
 
-source /projectnb/llamagrp/feyzanb/anaconda3/etc/profile.d/conda.sh
-conda activate dune
+module load conda
+conda activate dune2
 
+PROJECTP="/projectnb/llamagrp/feyzanb/dune"
 
 cnt=0
 for MODELNAME in "bard"; do
     (( cnt++ ))
     if [[ $cnt -eq $SGE_TASK_ID ]]; then
-        OUTDIR="/projectnb/llamagrp/feyzanb/dune/outputs/ARC_locality/retrieval_${MODELNAME}"
-        CACHE="/projectnb/llamagrp/feyzanb/dune/cache/ARC"
+        OUTDIR="${PROJECTP}/outputs/ARC_locality/retrieval_${MODELNAME}"
+        CACHE="${PROJECTP}/cache/ARC"
         mkdir -p $OUTDIR
         mkdir -p $CACHE
         python eval.py \
@@ -25,8 +26,8 @@ for MODELNAME in "bard"; do
         --dataset_name ARC \
         --output_dir $OUTDIR \
         --retriever_mechanism bm25 \
-        --chat_prompt_dict_path "/projectnb/llamagrp/feyzanb/dune/source/arc/chat_prompt_dict.json" \
-        --filename_queries "/projectnb/llamagrp/feyzanb/dune/source/arc/arc_locality_processed.json" \
+        --chat_prompt_dict_path "${PROJECTP}/source/arc/chat_prompt_dict.json" \
+        --filename_queries "${PROJECTP}/dune/scientific_locality.json" \
         --with_edit > ${OUTDIR}/log.txt 2>&1
     fi
 done
