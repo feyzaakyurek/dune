@@ -1,17 +1,19 @@
 import string
 from tqdm import tqdm
 from typing import List
-import ipdb
 import numpy as np
 from transformers import pipeline
-from transformers.pipelines.pt_utils import KeyDataset
 from datasets import Dataset
 from gptcache import GPTCache
 import json
 import os
 import re
 
-project_p = "/projectnb/llamagrp/feyzanb/dune"
+
+# Set Paths
+PROJECTP = "/projectnb/llamagrp/feyzanb/dune"
+SCOPECLASSIFIERPATH = f"{PROJECTP}/outputs/scope_classifier/distilbert-base-cased"
+ALLEDITSPATH = f"{PROJECTP}/source/fine-tuning-pool/all_shuffled_edits.txt"
 
 
 def is_equivalent(str1, str2, threshold=0.5):
@@ -40,17 +42,41 @@ def new_info_scrape_answer(answer):
     answer = answer.replace("answer", " ")
     answer = answer.replace("correct", " ")
 
+    # Remove preceding empty spaces
+    answer = answer.strip()
+
+    # If there is a single letter at the beginning with space after it, return it
+    if (
+        len(answer) > 1
+        and answer[0] in ["A", "B", "C", "D", "a", "b", "c", "d"]
+        and answer[1] == " "
+    ):
+        return answer[0].upper()
+
+    # Split answer by white space
+    answer = answer.split()
+
     # If there is a capital A, B, C or D, return it
-    if "A" in answer:
-        return "A"
-    elif "B" in answer:
+    if "B" in answer:
         return "B"
     elif "C" in answer:
         return "C"
     elif "D" in answer:
         return "D"
+    elif "A" in answer:
+        return "A"
     else:
-        return ""
+        answer = "".join(answer)
+        if "B" in answer:
+            return "B"
+        elif "C" in answer:
+            return "C"
+        elif "D" in answer:
+            return "D"
+        elif "A" in answer:
+            return "A"
+        else:
+            return ""
 
 
 def arc_scrape_answer(answer):
@@ -76,16 +102,26 @@ def arc_scrape_answer(answer):
     answer = answer.replace("correct", " ")
 
     # If there is a capital A, B, C or D, return it
-    if "A" in answer:
-        return "A"
-    elif "B" in answer:
+    if "B" in answer:
         return "B"
     elif "C" in answer:
         return "C"
     elif "D" in answer:
         return "D"
+    elif "A" in answer:
+        return "A"
     else:
-        return ""
+        answer = "".join(answer)
+        if "B" in answer:
+            return "B"
+        elif "C" in answer:
+            return "C"
+        elif "D" in answer:
+            return "D"
+        elif "A" in answer:
+            return "A"
+        else:
+            return ""
 
 
 def bbq_equivalence_test(str1, gold):
@@ -139,10 +175,42 @@ def bbq_equivalence_test(str1, gold):
 def bbnli_equivalence_test(str1, gold):
     str1 = str1.lower()
     gold = gold.lower()
+
+    if any(
+        [
+            p in str1
+            for p in [
+                "it depends on",
+                "it is not possible",
+                "it is impossible",
+                "it is not appropriate",
+                "it is difficult to",
+                "it is inappropriate",
+                "this is inappropriate",
+                "this is not inappropriate",
+            ]
+        ]
+    ):
+        return False
+
+    if any([p in gold for p in ["it depends on"]]):
+        return False
+
+    gold = gold.split("(")[0].strip()
+
     # Remove all punctuation from str1
     str1 = "".join([c for c in str1 if c not in string.punctuation])
     str1 = str1.split(" ")
-    if "maybe" in str1:
+    # Remove empty strings, if any
+    str1 = [s for s in str1 if s != ""]
+    # Drop single letters
+    str1 = [s for s in str1 if len(s) > 1]
+    # Drop the and a
+    str1 = [s for s in str1 if s not in ["a", "the"]]
+
+    # print(str1)
+
+    if "maybe" in str1 or ("yes" in str1 and "no" in str1):
         return False
     elif any([w in gold for w in str1]):
         return True
@@ -166,7 +234,7 @@ class Cache(object):
             self.cache = {}
 
     def add(self, batch, batch_answers):
-        if type(batch) == str:
+        if batch.isinstance(str):
             self.cache[batch] = batch_answers
         else:
             for b, a in zip(batch, batch_answers):
@@ -174,12 +242,12 @@ class Cache(object):
         json.dump(self.cache, open(self.cache_path, "w"))
 
     def check_cache(self, batch):
-        if type(batch) == str:
+        if batch.isinstance(str):
             return batch in self.cache
         return all([b in self.cache for b in batch])
 
     def __call__(self, batch):
-        if type(batch) == str:
+        if batch.isinstance(str):
             return self.cache[batch]
         return [self.cache[b] for b in batch]
 
@@ -199,7 +267,7 @@ def query_model(
     cache=None,
 ) -> List[str]:
     """Ask a question"""
-
+    model.eval()
     answers = []
     for i in tqdm(range(0, len(questions), batch_size), desc="Querying"):
         batch = questions[i : i + batch_size]
@@ -217,11 +285,11 @@ def query_model(
                 .input_ids
             )
             gen_tokens = model.generate(
-                input_ids,
+                input_ids=input_ids,
                 do_sample=do_sample,
-                max_new_tokens=max_length + len(input_ids[0]),
+                max_new_tokens=max_length,
             )
-
+            # + len(input_ids[0]),
         batch_answers = tokenizer.batch_decode(gen_tokens, skip_special_tokens=True)
         batch_answers = [b.replace(ip, "") for ip, b in zip(batch, batch_answers)]
         answers.extend(batch_answers)
@@ -269,6 +337,85 @@ def gpt3_retriever(values: List[str], queries: List):
 
     if not_ll:
         retrieved = [r[0] for r in retrieved]
+    return retrieved
+
+
+def dpr_retriever_generator(
+    faiss_index_path: str = "dpr-ctx_encoder-multiset-base.faiss",
+):
+    return lambda values, queries: dpr_retriever(
+        values, queries, faiss_index_path="dpr-ctx_encoder-multiset-base.faiss"
+    )
+
+
+def dpr_retriever(values: List[str], queries: List, faiss_index_path: str):
+    """
+    values: list of strings to search through
+    queries: list or list of lists of queries to search for
+    returns: list of list of retrieved values
+    """
+    from transformers import (
+        DPRQuestionEncoder,
+        DPRQuestionEncoderTokenizer,
+        DPRContextEncoder,
+        DPRContextEncoderTokenizer,
+    )
+    import torch
+
+    # List of lists?
+    not_ll = False
+    if not isinstance(queries[0], list):
+        not_ll = True
+        queries = [[t] for t in queries]
+
+    # Load question encoder.
+    torch.set_grad_enabled(False)
+    q_model_name = "facebook/dpr-question_encoder-multiset-base"
+    q_encoder = DPRQuestionEncoder.from_pretrained(q_model_name)
+    q_tokenizer = DPRQuestionEncoderTokenizer.from_pretrained(q_model_name)
+
+    # Load dataset.
+    ds = Dataset.from_dict({"line": values})
+
+    # Load faiss index.
+    if os.path.exists(faiss_index_path):
+        ds.load_faiss_index("embeddings", faiss_index_path)
+    else:
+        # Load context encoder.
+        model_name = "facebook/dpr-ctx_encoder-multiset-base"
+        ctx_encoder = DPRContextEncoder.from_pretrained(model_name)
+        ctx_tokenizer = DPRContextEncoderTokenizer.from_pretrained(model_name)
+
+        # Add embeddings to dataset.
+        ds = ds.map(
+            lambda example: {
+                "embeddings": ctx_encoder(
+                    **ctx_tokenizer(example["line"], return_tensors="pt")
+                )[0][0].numpy()
+            }
+        )
+
+        # Create and save the faiss index.
+        ds.add_faiss_index(column="embeddings")
+        ds.save_faiss_index("embeddings", faiss_index_path)
+
+    # For each query, get the nearest example.
+    retrieved = []
+    for qq in tqdm(queries, desc="Retrieving"):
+        retrieved_ = []
+        for q in qq:
+            question_embedding = q_encoder(**q_tokenizer(q, return_tensors="pt"))[0][
+                0
+            ].numpy()
+            scores, retrieved_examples = ds.get_nearest_examples(
+                "embeddings", question_embedding, k=1
+            )
+            retrieved_.append(retrieved_examples["line"][0])
+        retrieved.append(retrieved_)
+
+    if not_ll:
+        retrieved = [r[0] for r in retrieved]
+
     return retrieved
 
 
@@ -394,20 +541,3 @@ def find_last_consecutive_digits(input_string):
         return last_match
     else:
         return 9834038439284023
-
-
-# temp = Dataset.from_dict(
-#     {"text": [format_for_scope_classifier(ti, e) for e in edits_all]}
-# )
-# For each chuck of 20 edits, call the classifier
-# for scores in tqdm(classifier(KeyDataset(temp, "text"), batch_size=24)):
-
-# for scope_inp in tqdm((KeyDataset(temp, "text"))):
-# scores = classifier(scope_inp)
-# for i in range(0, len(edits_all), 20):
-#     edit_batch = edits_all[i : i + 20]
-#     scores = classifier(
-#         [format_for_scope_classifier(ti, e) for e in edit_batch]
-#     )
-# ipdb.set_trace()
-# for s in scores:

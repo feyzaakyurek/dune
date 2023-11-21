@@ -7,35 +7,6 @@ import ipdb
 import sys
 import time
 
-# Authors: Jacob Andreas, Feyza Akyurek
-
-# SAFETY_SETTINGS = [
-#     {
-#         "category": glv.types.HarmCategory.HARM_CATEGORY_DEROGATORY,
-#         "threshold": glv.types.SafetySetting.HarmBlockThreshold.BLOCK_NONE,
-#     },
-#     {
-#         "category": glv.types.HarmCategory.HARM_CATEGORY_VIOLENCE,
-#         "threshold": glv.types.SafetySetting.HarmBlockThreshold.BLOCK_NONE,
-#     },
-#     {
-#         "category": glv.types.HarmCategory.HARM_CATEGORY_SEXUAL,
-#         "threshold": glv.types.SafetySetting.HarmBlockThreshold.BLOCK_NONE,
-#     },
-#     {
-#         "category": glv.types.HarmCategory.HARM_CATEGORY_DANGEROUS,
-#         "threshold": glv.types.SafetySetting.HarmBlockThreshold.BLOCK_NONE,
-#     },
-#     {
-#         "category": glv.types.HarmCategory.HARM_CATEGORY_MEDICAL,
-#         "threshold": glv.types.SafetySetting.HarmBlockThreshold.BLOCK_NONE,
-#     },
-#     {
-#         "category": glv.types.HarmCategory.HARM_CATEGORY_UNSPECIFIED,
-#         "threshold": glv.types.SafetySetting.HarmBlockThreshold.BLOCK_NONE,
-#     },
-# ]
-
 SAFETY_SETTINGS = [
     palm.types.SafetySettingDict(
         category=palm.types.HarmCategory.HARM_CATEGORY_DEROGATORY,

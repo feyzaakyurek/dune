@@ -5,7 +5,7 @@ import ipdb
 import sys
 import time
 
-# Authors: Jacob Andreas, Feyza Akyurek
+# Authors: Courtesy of Jacob Andreas, edited by Feyza Akyurek.
 
 
 class GPTCache:

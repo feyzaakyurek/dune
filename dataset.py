@@ -11,6 +11,7 @@ from util import (
     find_last_consecutive_digits,
     new_info_scrape_answer,
     arc_scrape_answer,
+    PROJECTP,
 )
 import numpy as np
 import pandas as pd
@@ -37,18 +38,6 @@ class EditDataset(ABC):
     def sample_test_inputs(config: GPTConfig, gpt: GPTCache, ti_num: int):
         pass
 
-    def load_test_inputs(self, test_input_path: str, **kwargs):
-        with open(test_input_path, "r") as f:
-            data = json.load(f)
-        self.edits = data["edits"]
-        self.test_inputs = data["test_inputs"]
-
-    def get_test_inputs_only(self):
-        if type(self.test_inputs[0]) == list:
-            return [t[0] for t in self.test_inputs]
-        else:
-            return self.test_inputs
-
     @abstractmethod
     def _post_process_test_inputs():
         pass
@@ -61,12 +50,26 @@ class EditDataset(ABC):
     def save(path: str):
         pass
 
+    def load_test_inputs(self, test_input_path: str, **kwargs):
+        with open(test_input_path, "r") as f:
+            data = json.load(f)
+        self.edits = data["edits"]
+        self.test_inputs = data["test_inputs"]
+
+    def get_test_inputs_only(self):
+        if self.test_inputs[0].isinstance(list):
+            return [t[0] for t in self.test_inputs]
+        else:
+            return self.test_inputs
+
 
 class Arithmetic(EditDataset):
     def __init__(
         self,
     ):
-        data_file = "/projectnb/llamagrp/feyzanb/dune/source/arithmetic/arithmetic_validated_chainofreasoning.csv"
+        data_file = (
+            f"{PROJECTP}/source/arithmetic/arithmetic_validated_chainofreasoning.csv"
+        )
         self.edit_prompt = None
         self.test_input_prompt = None
         self.read_data(data_file)
@@ -139,7 +142,7 @@ class ARC(EditDataset):
     def __init__(
         self,
     ):
-        data_file = "/projectnb/llamagrp/feyzanb/dune/source/arc/arc_processed.csv"
+        data_file = f"{PROJECTP}/source/arc/arc_processed.csv"
         self.edit_prompt = None
         self.test_input_prompt = None
         self.read_data(data_file)
@@ -196,7 +199,7 @@ class NewInfo(EditDataset):
     def __init__(
         self,
     ):
-        data_file = "/projectnb/llamagrp/feyzanb/dune/source/newinfo/new_info.csv"
+        data_file = f"{PROJECTP}/source/newinfo/new_info.csv"
         self.edit_prompt = None
         self.test_input_prompt = None
         self.read_data(data_file)
@@ -245,7 +248,7 @@ class NewInfo(EditDataset):
 
     def test_scores(self, preds: List, **kwargs):
         # Eval edit and check equality.
-        assert type(preds[0]) == str
+        assert preds[0].isinstance(str)
         mode = kwargs.get("mode", "equality")
         mean = kwargs.get("mean", False)
 
@@ -277,14 +280,10 @@ class BBQ(EditDataset):
         self,
     ):
         self.data_file_name = "bbq_questions_answers"
-        data_file = (
-            f"/projectnb/llamagrp/feyzanb/dune/source/bbq/{self.data_file_name}.csv"
-        )
-        self.edit_prompt = Prompt(
-            "/projectnb/llamagrp/feyzanb/dune/prompts/bbq/sample_edit.txt"
-        )
+        data_file = f"{PROJECTP}/source/bbq/{self.data_file_name}.csv"
+        self.edit_prompt = Prompt(f"{PROJECTP}/prompts/bbq/sample_edit.txt")
         self.test_input_prompt = Prompt(
-            "/projectnb/llamagrp/feyzanb/dune/prompts/bbq/sample_test_inputs.txt"
+            f"{PROJECTP}/prompts/bbq/sample_test_inputs.txt"
         )
         self.read_data(data_file)
 
@@ -330,7 +329,7 @@ class BBQ(EditDataset):
             [self.test_input_prompt.out_func(c) for c in t] for t in self.test_inputs
         ]
 
-    def load_test_inputs(self, test_input_path: str, flattened=False):
+    def load_test_inputs(self, test_input_path: str, flattened=True):
         with open(test_input_path, "r") as f:
             data = json.load(f)
         if flattened:
@@ -354,7 +353,7 @@ class BBQ(EditDataset):
             scores = []
             for pred, test_input_a in zip(preds, self.test_inputs):
                 ti_group_scores = []
-                if type(pred) == str:
+                if pred.isinstance(str):
                     test_input_a = [test_input_a]
                     pred = [pred]
                 for p, ti_a in zip(pred, test_input_a):
@@ -391,14 +390,10 @@ class BBNLI(EditDataset):
         self,
     ):
         self.data_file_name = "bbnli_qa_short"
-        data_file = (
-            f"/projectnb/llamagrp/feyzanb/dune/source/bbnli/{self.data_file_name}.csv"
-        )
-        self.edit_prompt = Prompt(
-            "/projectnb/llamagrp/feyzanb/dune/prompts/bbnli/sample_edit.txt"
-        )
+        data_file = f"{PROJECTP}/source/bbnli/{self.data_file_name}.csv"
+        self.edit_prompt = Prompt(f"{PROJECTP}/prompts/bbnli/sample_edit.txt")
         self.test_input_prompt = Prompt(
-            "/projectnb/llamagrp/feyzanb/dune/prompts/bbnli/sample_test_inputs.txt"
+            f"{PROJECTP}/prompts/bbnli/sample_test_inputs.txt"
         )
         self.read_data(data_file)
 
@@ -513,12 +508,12 @@ class BBNLI(EditDataset):
 class RealToxicityPrompts(EditDataset):
     def __init__(self):
         self.data_file_name = "realtox_n300_gpt2_challenging"
-        data_file = f"/projectnb/llamagrp/feyzanb/dune/source/realtoxprompts/{self.data_file_name}.csv"
+        data_file = f"{PROJECTP}/source/realtoxprompts/{self.data_file_name}.csv"
         self.edit_prompt = Prompt(
-            "/projectnb/llamagrp/feyzanb/dune/prompts/real_toxicity_prompts/sample_edit.txt"
+            f"{PROJECTP}/prompts/real_toxicity_prompts/sample_edit.txt"
         )
         self.test_input_prompt = Prompt(
-            "/projectnb/llamagrp/feyzanb/dune/prompts/real_toxicity_prompts/sample_test_inputs.txt"
+            f"{PROJECTP}/prompts/real_toxicity_prompts/sample_test_inputs.txt"
         )
         self.read_data(data_file)
 
@@ -554,7 +549,9 @@ class RealToxicityPrompts(EditDataset):
     def sample_test_inputs(self, config: GPTConfig, gpt: GPTCache, ti_num: int = 1):
         self.ti_num = ti_num
         self.test_inp_queries = [
-            self.test_input_prompt.format(prompt=p, completion=c, omit_list=", ".join(o))
+            self.test_input_prompt.format(
+                prompt=p, completion=c, omit_list=", ".join(o)
+            )
             for p, c, o in zip(self.prompt_phrase, self.completions, self.edits)
         ]
 

@@ -11,3 +11,5 @@ jaxlib
 flax
 editdistance
 rank_bm25
+datasets
+faiss-gpu
