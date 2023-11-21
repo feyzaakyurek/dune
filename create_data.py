@@ -10,12 +10,8 @@ from config import (
     RealToxTestInputsConfig,
 )
 from gptcache import GPTCache
-from eval import eval_openai, eval_hf_bbnli, eval_hf_bbq, eval_bard_bbq, eval_hf_wscope
-from util import bm25_retriever
-import ipdb
-import json, os
-from tqdm import tqdm
-import argparse
+
+project_p = "/projectnb/llamagrp/feyzanb/dune"
 
 class_dict = {
     "BBNLI": BBNLI,
@@ -38,15 +34,14 @@ ti_config_dict = {
     "RealTox": RealToxTestInputsConfig,
 }
 
-project_p = "/projectnb/llamagrp/feyzanb/dune"
-
 
 def create_edit_data(name: str, ti_num: int = 2):
     cc = class_dict[name]()
     edit_config = edit_config_dict[name]()
     ti_config = edit_config_dict[name]()
+    cachep = f"{project_p}/cache/{name}/cache_{edit_config.model_name}.json"
     gpt = GPTCache(
-        cache_loc=f"{project_p}/cache/{name}/cache_{edit_config.model_name}.json",
+        cache_loc=cachep,
         key_loc="openai_key.txt",
         engine=edit_config.model_name,
     )
@@ -56,7 +51,4 @@ def create_edit_data(name: str, ti_num: int = 2):
 
 
 if __name__ == "__main__":
-    # DATA GENERATION #
-
     create_edit_data("BBNLI", ti_num=8)
-    create_edit_data("RealTox", ti_num=1)
