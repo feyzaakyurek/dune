@@ -11,16 +11,18 @@
 #$ -l gpu_c=6.0		# Request GPU compute capability
 #$ -t 1-2
 
-source /projectnb/llamagrp/feyzanb/anaconda3/etc/profile.d/conda.sh
-conda activate dune
+module load conda
+conda activate dune2
+
+PROJECTP="/projectnb/llamagrp/feyzanb/dune"
 
 cnt=0
 for MODELNAME in xl xxl; do
     for EDIT in "no_edit"; do
         (( cnt++ ))
         if [[ $cnt -eq $SGE_TASK_ID ]]; then
-            OUTDIR="/projectnb/llamagrp/feyzanb/dune/outputs/ARC_locality/${EDIT}_flan-t5-${MODELNAME}"
-            CACHE="/projectnb/llamagrp/feyzanb/dune/cache/ARC"
+            OUTDIR="${PROJECTP}/outputs/ARC_locality/${EDIT}_flan-t5-${MODELNAME}"
+            CACHE="${PROJECTP}/cache/ARC"
             mkdir -p $OUTDIR
             mkdir -p $CACHE
             python eval.py \
@@ -28,24 +30,8 @@ for MODELNAME in xl xxl; do
             --dataset_name ARC \
             --output_dir $OUTDIR \
             --generations_cache $CACHE/flan-t5-${MODELNAME}.json \
-            --filename_queries "/projectnb/llamagrp/feyzanb/dune/source/arc/arc_locality_processed.json" \
+            --filename_queries "${PROJECTP}/dune/arc_locality_processed.json" \
             --$EDIT > ${OUTDIR}/log${edit}.txt 2>&1
         fi
     done
 done
-
-# "/projectnb/llamagrp/feyzanb/dune/source/arc/chat_prompt_dict.json"
-
-# EDIT="with_edit"
-# MODELNAME="small"
-# OUTDIR="/projectnb/llamagrp/feyzanb/dune/outputs/ARC/${EDIT}_flan-t5-${MODELNAME}"
-# CACHE="/projectnb/llamagrp/feyzanb/dune/cache/ARC"
-# mkdir -p $OUTDIR
-# mkdir -p $CACHE
-# python eval.py \
-# --model_name google/flan-t5-$MODELNAME \
-# --dataset_name ARC \
-# --output_dir $OUTDIR \
-# --generations_cache $CACHE/flan-t5-${MODELNAME}.json \
-# --filename_queries "/projectnb/llamagrp/feyzanb/dune/source/arc/arc_processed.json" \
-# --$EDIT
