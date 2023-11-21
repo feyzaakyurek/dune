@@ -11,7 +11,12 @@ from config import (
 )
 
 from eval_utils import eval_api, eval_hf
-from util import bm25_retriever_generator, get_edits_with_scope, gpt3_retriever
+from util import (
+    bm25_retriever_generator,
+    get_edits_with_scope,
+    gpt3_retriever,
+    dpr_retriever_generator,
+)
 import ipdb
 import json
 import os
@@ -49,6 +54,8 @@ def create_retriever(args):
         return bm25_retriever_generator(args.num_retrievals)
     elif retriever_mechanism == "gpt3":
         return gpt3_retriever
+    elif retriever_mechanism == "dpr":
+        return dpr_retriever_generator(args.faiss_index_path)
     elif retriever_mechanism == "scope":
 
         def fscp(ti, edit):
@@ -100,6 +107,8 @@ def main():
     parser.add_argument("--retriever_mechanism", type=str, default=None)
     parser.add_argument("--max_new_tokens", type=int, default=20)
     parser.add_argument("--from_flax", action="store_true")
+    parser.add_argument("--llama", action="store_true")
+    parser.add_argument("--peft", action="store_true")
     parser.add_argument("--device", type=str, default="cuda:0")
     parser.add_argument("--scope_cache", type=str, default=None)
     parser.add_argument("--generations_cache", type=str, default=None)
@@ -107,12 +116,13 @@ def main():
     parser.add_argument("--num_retrievals", type=int, default=1)
     parser.add_argument("--batch_size", type=int, default=10)
     parser.add_argument("--chat_prompt_dict_path", type=str, default=None)
+    parser.add_argument("--faiss_index_path", type=str, default=None)
     args = parser.parse_args()
 
     if "gpt" in args.model_name:
         eval_func = eval_api
         args.api = "openai"
-    elif "flan" in args.model_name:
+    elif "flan" in args.model_name or "llama" in args.model_name:
         eval_func = eval_hf
     elif "bard" in args.model_name:
         eval_func = eval_api
