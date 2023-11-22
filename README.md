@@ -4,8 +4,12 @@ Codebase and data for DUnE: Dataset for Unified Editing, Afra Feyza Akyurek, Eri
 
 We define an *edit* as a natural language statement that solicits a change in model behavior. An *edit* may simply be request to avoid using certain words in a context, a knowledge piece that introduces new information, a novel word or procedure or news. It may also comprise a request to avoid certain biases and assumptions. Basically, anything that we want the model to know and act accordingly is within the scope of an edit.
 
-## TODO
-- [ ] add scripts for creating data
+![DUnE](dune_figure.jpg)
+
+## Data
+Dataset can be found under `dune`. For each of 5 subsets, there is one main and one locality file, the latter contains the locality queries whose answers should remain unchanged after edits. JSON files contain the following main fields along with others:
+- `edits`: edits in natural language
+- `test_inputs`: edit queries in natural language
 
 ## Definitions
 
@@ -26,3 +30,6 @@ Debiasing | Assuming that the woman's job will suffer due to family obligations 
 
 ## Running
 Check out the `requirements.txt` for creating a virtual environment. Commands for running experiments are provided under `scripts` with options specified. For loops (if any) can be removed while setting the desired parameters. Make sure to double check all the necessary paths. 
+
+## TODO
+- [ ] add scripts for creating datasets
