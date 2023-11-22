@@ -7,7 +7,7 @@ We define an *edit* as a natural language statement that solicits a change in mo
 ![DUnE](dune_figure.jpg)
 
 ## Data
-Dataset can be found under `dune`. For each of 5 subsets, there is one main and one locality file, the latter contains the locality queries whose answers should remain unchanged after edits. JSON files contain the following main fields along with others:
+Dataset can be found under `dune`. For each of the 5 subsets, there is one main and one locality file, the latter contains the locality queries whose answers should remain unchanged after edits. JSON files contain the following main fields along with others:
 - `edits`: edits in natural language
 - `test_inputs`: edit queries in natural language
 
