@@ -7,20 +7,21 @@
 #$ -m a             # Send email when job begins, ends and aborts
 #$ -pe omp 4          # Specify the parallel environment and the number of cores
 #$ -l gpus=1           # Request GPU
-#$ -l gpu_memory=16G  # Request 48GB of GPU memory per GPU
+#$ -l gpu_memory=48G  # Request 48GB of GPU memory per GPU
 #$ -l gpu_c=6.0		# Request GPU compute capability
-#$ -t 1-3
+#$ -t 1-2
 
-source /projectnb/llamagrp/feyzanb/anaconda3/etc/profile.d/conda.sh
-conda activate dune
+module load conda
+conda activate dune2
 
+PROJECTP="/projectnb/llamagrp/feyzanb/dune"
 
 cnt=0
-for MODELNAME in small base large; do
+for MODELNAME in xl xxl; do
     (( cnt++ ))
     if [[ $cnt -eq $SGE_TASK_ID ]]; then
-        OUTDIR="/projectnb/llamagrp/feyzanb/dune/outputs/NewInfo_locality/retrieval_gpt3_flan-t5-${MODELNAME}"
-        CACHE="/projectnb/llamagrp/feyzanb/dune/cache/NewInfo"
+        OUTDIR="${PROJECTP}/outputs/NewInfo_post_emnlp/retrieval_gpt3_flan-t5-${MODELNAME}"
+        CACHE="${PROJECTP}/cache/NewInfo"
         mkdir -p $OUTDIR
         mkdir -p $CACHE
         python eval.py \
@@ -30,6 +31,6 @@ for MODELNAME in small base large; do
         --retriever_mechanism gpt3 \
         --generations_cache $CACHE/flan-t5-${MODELNAME}.json \
         --with_edit \
-        --filename_queries "/projectnb/llamagrp/feyzanb/dune/source/newinfo/new_info_locality_processed.json" > ${OUTDIR}/log.txt 2>&1
+        --filename_queries "${PROJECTP}/dune/new_info.json" > ${OUTDIR}/log.txt 2>&1
     fi
 done

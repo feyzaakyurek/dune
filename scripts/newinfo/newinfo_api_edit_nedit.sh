@@ -6,36 +6,39 @@
 #$ -j y               # Merge the error and output streams into a single file
 #$ -m a             # Send email when job begins, ends and aborts
 #$ -pe omp 4          # Specify the parallel environment and the number of cores
-#$ -t 1
+#$ -t 1-2
 
-source /projectnb/llamagrp/feyzanb/anaconda3/etc/profile.d/conda.sh
-conda activate dune
+module load conda
+conda activate dune2
+
+PROJECTP="/projectnb/llamagrp/feyzanb/dune"
+
+EDIT="no_edit"
+MODELNAME="bard"
+OUTDIR="${PROJECTP}/outputs/NewInfo/${EDIT}_${MODELNAME}"
+mkdir -p $OUTDIR
+python eval.py \
+--model_name $MODELNAME \
+--dataset_name NewInfo \
+--output_dir $OUTDIR \
+--filename_queries "${PROJECTP}/dune/new_info.json" \
+--$EDIT
 
 
-cnt=0
-for MODELNAME in "bard"; do
-    for EDIT in "no_edit"; do
-        (( cnt++ ))
-        if [[ $cnt -eq $SGE_TASK_ID ]]; then
-            OUTDIR="/projectnb/llamagrp/feyzanb/dune/outputs/NewInfo_locality/${EDIT}_${MODELNAME}"
-            mkdir -p $OUTDIR
-            python eval.py \
-            --model_name $MODELNAME \
-            --dataset_name NewInfo \
-            --output_dir $OUTDIR \
-            --filename_queries "/projectnb/llamagrp/feyzanb/dune/source/newinfo/new_info_locality_processed.json" \
-            --$EDIT > ${OUTDIR}/log${edit}.txt 2>&1
-        fi
-    done
-done
+# cnt=0
+# for MODELNAME in "bard"; do
+#     for EDIT in "with_edit" "no_edit"; do
+#         (( cnt++ ))
+#         if [[ $cnt -eq $SGE_TASK_ID ]]; then
+#             OUTDIR="${PROJECTP}/outputs/NewInfo_post_emnlp/${EDIT}_${MODELNAME}"
+#             mkdir -p $OUTDIR
+#             python eval.py \
+#             --model_name $MODELNAME \
+#             --dataset_name NewInfo \
+#             --output_dir $OUTDIR \
+#             --filename_queries "${PROJECTP}/source/newinfo/new_info.json" \
+#             --$EDIT > ${OUTDIR}/log${edit}.txt 2>&1
+#         fi
+#     done
+# done
 
-# EDIT="no_edit"
-# MODELNAME="bard"
-# OUTDIR="/projectnb/llamagrp/feyzanb/dune/outputs/NewInfo/${EDIT}_${MODELNAME}"
-# mkdir -p $OUTDIR
-# python eval.py \
-# --model_name $MODELNAME \
-# --dataset_name NewInfo \
-# --output_dir $OUTDIR \
-# --filename_queries "/projectnb/llamagrp/feyzanb/dune/source/newinfo/new_info.json" \
-# --$EDIT

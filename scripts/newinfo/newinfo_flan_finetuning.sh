@@ -8,17 +8,18 @@
 #$ -pe omp 10          # Specify the parallel environment and the number of cores
 #$ -t 1-5
 
-source /projectnb/llamagrp/feyzanb/anaconda3/etc/profile.d/conda.sh
-conda activate dunetrans
+module load conda
+conda activate dune2
 
+PROJECTP="/projectnb/llamagrp/feyzanb/dune"
 
 cnt=0
 for MODELNAME in small base large xl xxl; do
     (( cnt++ ))
     if [[ $cnt -eq $SGE_TASK_ID ]]; then
-        OUTDIR="/projectnb/llamagrp/feyzanb/dune/outputs/NewInfo_locality/finetuning_flan-t5-${MODELNAME}"
-        MODELPATH="/projectnb/llamagrp/feyzanb/dune/outputs/"
-        CACHE="/projectnb/llamagrp/feyzanb/dune/cache/NewInfo"
+        OUTDIR="${PROJECTP}/outputs/NewInfo_post_emnlp/finetuning_flan-t5-${MODELNAME}"
+        MODELPATH="${PROJECTP}/outputs/"
+        CACHE="${PROJECTP}/cache/NewInfo"
         mkdir -p $OUTDIR
         mkdir -p $CACHE
         python eval.py \
@@ -26,7 +27,7 @@ for MODELNAME in small base large xl xxl; do
         --dataset_name NewInfo \
         --output_dir $OUTDIR \
         --generations_cache $CACHE/all_fine_tune_flant5$MODELNAME.json \
-        --filename_queries "/projectnb/llamagrp/feyzanb/dune/source/newinfo/new_info_locality_processed.json" \
+        --filename_queries "${PROJECTP}/dune/new_info.json" \
         --from_flax > ${OUTDIR}/log.txt 2>&1
     fi
 done

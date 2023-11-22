@@ -11,16 +11,18 @@
 #$ -l gpu_c=6.0		# Request GPU compute capability
 #$ -t 1-3
 
-source /projectnb/llamagrp/feyzanb/anaconda3/etc/profile.d/conda.sh
-conda activate dune
+module load conda
+conda activate dune2
+
+PROJECTP="/projectnb/llamagrp/feyzanb/dune"
 
 
 cnt=0
 for MODELNAME in "gpt-3.5-turbo" "gpt-4" "bard"; do
     (( cnt++ ))
     if [[ $cnt -eq $SGE_TASK_ID ]]; then
-        OUTDIR="/projectnb/llamagrp/feyzanb/dune/outputs/NewInfo_locality/retrieval_conditional_${MODELNAME}"
-        CACHE="/projectnb/llamagrp/feyzanb/dune/cache/NewInfo"
+        OUTDIR="${PROJECTP}/outputs/NewInfo/retrieval_conditional_${MODELNAME}"
+        CACHE="${PROJECTP}/cache/NewInfo"
         mkdir -p $OUTDIR
         mkdir -p $CACHE
         python eval.py \
@@ -28,8 +30,8 @@ for MODELNAME in "gpt-3.5-turbo" "gpt-4" "bard"; do
         --dataset_name NewInfo \
         --output_dir $OUTDIR \
         --retriever_mechanism scope \
-        --filename_queries "/projectnb/llamagrp/feyzanb/dune/source/newinfo/new_info_locality_processed.json" \
-        --scope_cache /projectnb/llamagrp/feyzanb/dune/outputs/scope_classifier/distilbert-base-cased/all_shuffled_edits_cache.json \
+        --filename_queries "${PROJECTP}/dune/new_info.json" \
+        --scope_cache ${PROJECTP}/outputs/scope_classifier/distilbert-base-cased/all_shuffled_edits_cache.json \
         --with_edit > ${OUTDIR}/log.txt 2>&1
     fi
 done
