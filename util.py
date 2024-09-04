@@ -499,7 +499,7 @@ def get_edits_with_scope(
 
                 # Get the index of the max element in scope_for_ti
                 if max(scope_for_ti) > 0.5:
-                    # Get all the indeix that are higher than 0.5
+                    # Get all the index that are higher than 0.5
                     scope_id_wscore = [
                         (i, x) for i, x in enumerate(scope_for_ti) if x >= 0.5
                     ]
