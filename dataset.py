@@ -66,13 +66,13 @@ class EditDataset(ABC):
 class Arithmetic(EditDataset):
     def __init__(
         self,
+        read_data=False,
     ):
-        data_file = (
-            f"{PROJECTP}/source/arithmetic/arithmetic_validated_chainofreasoning.csv"
-        )
         self.edit_prompt = None
         self.test_input_prompt = None
-        self.read_data(data_file)
+        if read_data:
+            data_file = f"{PROJECTP}/source/arithmetic/arithmetic_validated_chainofreasoning.csv"
+            self.read_data(data_file)
 
         # Will be used when sampling answers to test inputs.
         self.form_with_edit = (
@@ -100,8 +100,12 @@ class Arithmetic(EditDataset):
     def _post_process_edits():
         pass
 
-    def sample_test_inputs(self, config: GPTConfig, gpt: GPTCache, ti_num: int = 1):
-        cols = [col for col in self.data.columns if col.startswith("test_input")]
+    def sample_test_inputs(
+        self, config: GPTConfig, gpt: GPTCache, ti_num: int = 1
+    ):
+        cols = [
+            col for col in self.data.columns if col.startswith("test_input")
+        ]
         self.test_inputs = [
             [row[col] for col in cols] for _, row in self.data.iterrows()
         ]
@@ -111,19 +115,24 @@ class Arithmetic(EditDataset):
 
     def test_scores(self, preds: List, **kwargs):
         # Eval edit and check equality.
-        assert type(preds[0]) == str
+        assert type(preds[0]) is str
         mode = kwargs.get("mode", "equality")
         mean = kwargs.get("mean", False)
 
         gold = [float(eval(e.split(" = ")[0])) for e in self.edits]
-        preds = [float(find_last_consecutive_digits(p.replace(",", ""))) for p in preds]
+        preds = [
+            float(find_last_consecutive_digits(p.replace(",", "")))
+            for p in preds
+        ]
 
         if mode == "equality":
             scores = []
             for pred, g in zip(preds, gold):
                 scores.append(pred == g)
         else:
-            raise NotImplementedError("Only equality mode is implemented for now.")
+            raise NotImplementedError(
+                "Only equality mode is implemented for now."
+            )
         return np.mean(scores) if mean else scores
 
     def save(self, path: str):
@@ -141,11 +150,13 @@ class Arithmetic(EditDataset):
 class ARC(EditDataset):
     def __init__(
         self,
+        read_data=False,
     ):
-        data_file = f"{PROJECTP}/source/arc/arc_processed.csv"
         self.edit_prompt = None
         self.test_input_prompt = None
-        self.read_data(data_file)
+        if read_data:
+            data_file = f"{PROJECTP}/source/arc/arc_processed.csv"
+            self.read_data(data_file)
 
         # Will be used when sampling answers to test inputs.
         self.form_with_edit = "{edit} {question}"
@@ -160,7 +171,9 @@ class ARC(EditDataset):
     def _post_process_edits():
         pass
 
-    def sample_test_inputs(self, config: GPTConfig, gpt: GPTCache, ti_num: int = 1):
+    def sample_test_inputs(
+        self, config: GPTConfig, gpt: GPTCache, ti_num: int = 1
+    ):
         pass
 
     def _post_process_test_inputs(self):
@@ -168,7 +181,7 @@ class ARC(EditDataset):
 
     def test_scores(self, preds: List, **kwargs):
         # Eval edit and check equality.
-        assert type(preds[0]) == str
+        assert type(preds[0]) is str
         mode = kwargs.get("mode", "equality")
         mean = kwargs.get("mean", False)
 
@@ -180,7 +193,9 @@ class ARC(EditDataset):
             for pred, g in zip(preds, gold):
                 scores.append(pred == g)
         else:
-            raise NotImplementedError("Only equality mode is implemented for now.")
+            raise NotImplementedError(
+                "Only equality mode is implemented for now."
+            )
         return np.mean(scores) if mean else scores
 
     def save(self, path: str):
@@ -198,11 +213,13 @@ class ARC(EditDataset):
 class NewInfo(EditDataset):
     def __init__(
         self,
+        read_data=False,
     ):
-        data_file = f"{PROJECTP}/source/newinfo/new_info.csv"
         self.edit_prompt = None
         self.test_input_prompt = None
-        self.read_data(data_file)
+        if read_data:
+            data_file = f"{PROJECTP}/source/newinfo/new_info.csv"
+            self.read_data(data_file)
 
         # Will be used when sampling answers to test inputs.
         self.form_with_edit = (
@@ -225,7 +242,9 @@ class NewInfo(EditDataset):
     def _post_process_edits():
         pass
 
-    def sample_test_inputs(self, config: GPTConfig, gpt: GPTCache, ti_num: int = 1):
+    def sample_test_inputs(
+        self, config: GPTConfig, gpt: GPTCache, ti_num: int = 1
+    ):
         pass
 
     def _post_process_test_inputs(self):
@@ -260,7 +279,9 @@ class NewInfo(EditDataset):
             for pred, g in zip(preds, gold):
                 scores.append(pred == g)
         else:
-            raise NotImplementedError("Only equality mode is implemented for now.")
+            raise NotImplementedError(
+                "Only equality mode is implemented for now."
+            )
         return np.mean(scores) if mean else scores
 
     def save(self, path: str):
@@ -278,14 +299,16 @@ class NewInfo(EditDataset):
 class BBQ(EditDataset):
     def __init__(
         self,
+        read_data=False,
     ):
-        self.data_file_name = "bbq_questions_answers"
-        data_file = f"{PROJECTP}/source/bbq/{self.data_file_name}.csv"
         self.edit_prompt = Prompt(f"{PROJECTP}/prompts/bbq/sample_edit.txt")
         self.test_input_prompt = Prompt(
             f"{PROJECTP}/prompts/bbq/sample_test_inputs.txt"
         )
-        self.read_data(data_file)
+        if read_data:
+            self.data_file_name = "bbq_questions_answers"
+            data_file = f"{PROJECTP}/source/bbq/{self.data_file_name}.csv"
+            self.read_data(data_file)
 
         # Will be used when sampling answers to test inputs.
         # self.form_with_edit = "{question} Note that {edit}"
@@ -296,7 +319,8 @@ class BBQ(EditDataset):
         self.answers = ans = self.edit_queries["answer"].tolist()
         self.questions = qs = self.edit_queries["question"].tolist()
         self.edit_queries = [
-            self.edit_prompt.format(answer=a, question=q) for a, q in zip(ans, qs)
+            self.edit_prompt.format(answer=a, question=q)
+            for a, q in zip(ans, qs)
         ]
 
     def sample_edit(self, config: GPTConfig, gpt: GPTCache):
@@ -308,7 +332,9 @@ class BBQ(EditDataset):
     def _post_process_edits(self):
         self.edits = [self.edit_prompt.out_func(e) for e in self.edits]
 
-    def sample_test_inputs(self, config: GPTConfig, gpt: GPTCache, ti_num: int = 1):
+    def sample_test_inputs(
+        self, config: GPTConfig, gpt: GPTCache, ti_num: int = 1
+    ):
         self.ti_num = ti_num
         self.test_inp_queries = [
             self.test_input_prompt.format(guideline=g, question=q, answer=a)
@@ -326,7 +352,8 @@ class BBQ(EditDataset):
 
     def _post_process_test_inputs(self):
         self.test_inputs = [
-            [self.test_input_prompt.out_func(c) for c in t] for t in self.test_inputs
+            [self.test_input_prompt.out_func(c) for c in t]
+            for t in self.test_inputs
         ]
 
     def load_test_inputs(self, test_input_path: str, flattened=True):
@@ -358,12 +385,16 @@ class BBQ(EditDataset):
                     pred = [pred]
                 for p, ti_a in zip(pred, test_input_a):
                     try:
-                        ti_group_scores.append(bbq_equivalence_test(p, ti_a[1]))
+                        ti_group_scores.append(
+                            bbq_equivalence_test(p, ti_a[1])
+                        )
                     except IndexError:
                         ti_group_scores.append(0)
                 scores.append(np.mean(ti_group_scores))
         else:
-            raise NotImplementedError("Only equivalence mode is implemented for now.")
+            raise NotImplementedError(
+                "Only equivalence mode is implemented for now."
+            )
         return np.mean(scores) if mean else scores
 
     def save(self, path: str):
@@ -380,7 +411,10 @@ class BBQ(EditDataset):
             "test_inputs": self.test_inputs,
         }
         with open(
-            os.path.join(path, f"{self.data_file_name}_ti{self.ti_num}_out.json"), "w"
+            os.path.join(
+                path, f"{self.data_file_name}_ti{self.ti_num}_out.json"
+            ),
+            "w",
         ) as f:
             json.dump(dd, f)
 
@@ -388,14 +422,16 @@ class BBQ(EditDataset):
 class BBNLI(EditDataset):
     def __init__(
         self,
+        read_data=False,
     ):
-        self.data_file_name = "bbnli_qa_short"
-        data_file = f"{PROJECTP}/source/bbnli/{self.data_file_name}.csv"
         self.edit_prompt = Prompt(f"{PROJECTP}/prompts/bbnli/sample_edit.txt")
         self.test_input_prompt = Prompt(
             f"{PROJECTP}/prompts/bbnli/sample_test_inputs.txt"
         )
-        self.read_data(data_file)
+        if read_data:
+            self.data_file_name = "bbnli_qa_short"
+            data_file = f"{PROJECTP}/source/bbnli/{self.data_file_name}.csv"
+            self.read_data(data_file)
 
         # Will be used when sampling answers to test inputs.
         self.form_with_edit = (
@@ -413,7 +449,8 @@ class BBNLI(EditDataset):
         self.premises = ps = self.edit_queries["premise"].tolist()
         self.questions = qs = self.edit_queries["question"].tolist()
         self.edit_queries = [
-            self.edit_prompt.format(premise=p, question=q) for p, q in zip(ps, qs)
+            self.edit_prompt.format(premise=p, question=q)
+            for p, q in zip(ps, qs)
         ]
 
     def sample_edit(self, config: GPTConfig, gpt: GPTCache):
@@ -425,10 +462,14 @@ class BBNLI(EditDataset):
     def _post_process_edits(self):
         self.edits = [self.edit_prompt.out_func(e) for e in self.edits]
 
-    def sample_test_inputs(self, config: GPTConfig, gpt: GPTCache, ti_num: int = 1):
+    def sample_test_inputs(
+        self, config: GPTConfig, gpt: GPTCache, ti_num: int = 1
+    ):
         self.ti_num = ti_num
         self.test_inp_queries = [
-            self.test_input_prompt.format(guideline=g, question=q, answer="Yes")
+            self.test_input_prompt.format(
+                guideline=g, question=q, answer="Yes"
+            )
             for g, q in zip(self.edits, self.questions)
         ]
         self.test_inputs = []
@@ -443,7 +484,8 @@ class BBNLI(EditDataset):
 
     def _post_process_test_inputs(self):
         self.test_inputs = [
-            [self.test_input_prompt.out_func(c) for c in t] for t in self.test_inputs
+            [self.test_input_prompt.out_func(c) for c in t]
+            for t in self.test_inputs
         ]
 
     def load_test_inputs(self, test_input_path: str, flattened=False):
@@ -463,7 +505,7 @@ class BBNLI(EditDataset):
 
     def test_scores(self, preds: List, **kwargs):
         assert len(preds) == len(self.test_inputs)
-        if type(preds[0]) == list:
+        if type(preds[0]) is list:
             for i, pred in enumerate(preds):
                 assert len(pred) == len(self.test_inputs[i])
         mode = kwargs.get("mode", "equivalence")
@@ -483,7 +525,9 @@ class BBNLI(EditDataset):
                     )
                 )
         else:
-            raise NotImplementedError("Only equivalence mode is implemented for now.")
+            raise NotImplementedError(
+                "Only equivalence mode is implemented for now."
+            )
         return np.mean(scores) if mean else scores
 
     def save(self, path: str):
@@ -500,22 +544,31 @@ class BBNLI(EditDataset):
             "test_inputs": self.test_inputs,
         }
         with open(
-            os.path.join(path, f"{self.data_file_name}_ti{self.ti_num}_out.json"), "w"
+            os.path.join(
+                path, f"{self.data_file_name}_ti{self.ti_num}_out.json"
+            ),
+            "w",
         ) as f:
             json.dump(dd, f)
 
 
 class RealToxicityPrompts(EditDataset):
-    def __init__(self):
-        self.data_file_name = "realtox_n300_gpt2_challenging"
-        data_file = f"{PROJECTP}/source/realtoxprompts/{self.data_file_name}.csv"
+    def __init__(
+        self,
+        read_data=False,
+    ):
         self.edit_prompt = Prompt(
             f"{PROJECTP}/prompts/real_toxicity_prompts/sample_edit.txt"
         )
         self.test_input_prompt = Prompt(
             f"{PROJECTP}/prompts/real_toxicity_prompts/sample_test_inputs.txt"
         )
-        self.read_data(data_file)
+        if read_data:
+            self.data_file_name = "realtox_n300_gpt2_challenging"
+            data_file = (
+                f"{PROJECTP}/source/realtoxprompts/{self.data_file_name}.csv"
+            )
+            self.read_data(data_file)
 
     def read_data(self, data_file: str):
         self.edit_queries = pd.read_csv(data_file)
@@ -533,7 +586,8 @@ class RealToxicityPrompts(EditDataset):
 
         # Prepare the prompt for getting edits.
         self.edit_queries = [
-            self.edit_prompt.format(prompt=p, completion=q) for p, q in zip(ps, qs)
+            self.edit_prompt.format(prompt=p, completion=q)
+            for p, q in zip(ps, qs)
         ]
 
     def sample_edit(self, config: GPTConfig, gpt: GPTCache):
@@ -546,13 +600,17 @@ class RealToxicityPrompts(EditDataset):
     def _post_process_edits(self):
         self.edits = [self.edit_prompt.out_func(e) for e in self.edits]
 
-    def sample_test_inputs(self, config: GPTConfig, gpt: GPTCache, ti_num: int = 1):
+    def sample_test_inputs(
+        self, config: GPTConfig, gpt: GPTCache, ti_num: int = 1
+    ):
         self.ti_num = ti_num
         self.test_inp_queries = [
             self.test_input_prompt.format(
                 prompt=p, completion=c, omit_list=", ".join(o)
             )
-            for p, c, o in zip(self.prompt_phrase, self.completions, self.edits)
+            for p, c, o in zip(
+                self.prompt_phrase, self.completions, self.edits
+            )
         ]
 
         self.test_inputs = []
@@ -568,7 +626,8 @@ class RealToxicityPrompts(EditDataset):
 
     def _post_process_test_inputs(self):
         self.test_inputs = [
-            [self.test_input_prompt.out_func(c) for c in t] for t in self.test_inputs
+            [self.test_input_prompt.out_func(c) for c in t]
+            for t in self.test_inputs
         ]
 
     def test_scores(self, preds: List[List[List[str]]], **kwargs):
@@ -599,6 +658,9 @@ class RealToxicityPrompts(EditDataset):
             "test_inputs": self.test_inputs,
         }
         with open(
-            os.path.join(path, f"{self.data_file_name}_ti{self.ti_num}_out.json"), "w"
+            os.path.join(
+                path, f"{self.data_file_name}_ti{self.ti_num}_out.json"
+            ),
+            "w",
         ) as f:
             json.dump(dd, f)
